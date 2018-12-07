@@ -79,7 +79,7 @@ dependencies {
     compile 'com.typesafe:config:1.2.1'
     compile 'lzma:lzma:0.0.1'
     compile 'java3d:vecmath:1.5.2'
-    compile 'net.sf.trove4j:trove4j:3.1.0'
+    compile 'net.sf.trove4j:core:3.1.0'
     compile 'org.apache.maven:maven-artifact:3.5.3'
     compile 'org.yaml:snakeyaml:1.23'
     compile 'com.googlecode.json-simple:json-simple:1.1.1'
