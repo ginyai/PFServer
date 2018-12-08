@@ -63,7 +63,7 @@ public class Metrics {
     private final List<CustomChart> charts = new ArrayList<>();
 
     private final String pluginName = "PFServer";
-    private final String pluginVersion = "1.12.2";
+    private final String pluginVersion = Bukkit.getVersion();
 
     /**
      * Class constructor.
