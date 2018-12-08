@@ -109,9 +109,7 @@ public class Metrics {
         logSentData = config.getBoolean("logSentData", false);
         logResponseStatusText = config.getBoolean("logResponseStatusText", false);
 
-        if (enabled) {
-            startSubmitting();
-        }
+        startSubmitting();
     }
 
     /**
