@@ -63,13 +63,8 @@ public class Metrics {
     private final List<CustomChart> charts = new ArrayList<>();
 
     private final String pluginName = "PFServer";
-    private final String pluginVersion = Bukkit.getVersion();
+    private final String pluginVersion = (Metrics.class.getPackage().getImplementationVersion() != null) ? Metrics.class.getPackage().getImplementationVersion() : "unknown";
 
-    /**
-     * Class constructor.
-     *
-     * @param plugin The plugin which stats should be submitted.
-     */
     public Metrics() {
         // Get the config file
         File bStatsFolder = new File(new File((File) MinecraftServer.getServerInst().options.valueOf("plugins"), "bStats"), "config.yml");
@@ -229,29 +224,19 @@ public class Metrics {
         data.put("plugins", pluginData);
 
         // Create a new thread for the connection to the bStats server
-        new Thread(new Runnable() {
-            @Override
-            public void run() {
-                try {
-                    // Send the data
-                    sendData(data);
-                } catch (Exception e) {
-                    // Something went wrong! :(
-                    if (logFailedRequests) {
-                        Bukkit.getLogger().log(Level.WARNING, "Could not submit plugin stats of " + pluginName, e);
-                    }
+        new Thread(() -> {
+            try {
+                // Send the data
+                sendData(data);
+            } catch (Exception e) {
+                // Something went wrong! :(
+                if (logFailedRequests) {
+                    Bukkit.getLogger().log(Level.WARNING, "Could not submit plugin stats of " + pluginName, e);
                 }
             }
         }).start();
     }
 
-    /**
-     * Sends the data to the bStats server.
-     *
-     * @param plugin Any plugin. It's just used to get a logger instance.
-     * @param data The data to send.
-     * @throws Exception If the request failed.
-     */
     private static void sendData(JSONObject data) throws Exception {
         if (data == null) {
             throw new IllegalArgumentException("Data cannot be null!");
