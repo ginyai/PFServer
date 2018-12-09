@@ -124,7 +124,7 @@ task jar_server(type: Jar) {
     classifier = 'server'
     manifest {
         attributes(
-                "Implementation-Title": "rootProject.name",
+                "Implementation-Title": "PFServer",
                 "Implementation-Version": "git-" + version,
                 "Main-Class": "net.minecraftforge.fml.relauncher.ServerLaunchWrapper",
                 "TweakClass": "net.minecraftforge.fml.common.launcher.FMLTweaker",
