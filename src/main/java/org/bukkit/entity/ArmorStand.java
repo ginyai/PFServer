@@ -11,6 +11,8 @@ public interface ArmorStand extends LivingEntity {
      *
      * @return the held item
      */
+    ItemStack getItemInHand();
+
     ItemStack getItemInMainHand();
 
     ItemStack getItemInOffHand();
@@ -21,6 +23,8 @@ public interface ArmorStand extends LivingEntity {
      *
      * @param item the item to hold
      */
+    void setItemInHand(ItemStack item);
+
     void setItemInMainHand(ItemStack item);
 
     void setItemInOffHand(ItemStack item);

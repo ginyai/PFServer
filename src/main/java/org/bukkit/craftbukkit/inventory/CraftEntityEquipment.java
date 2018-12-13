@@ -35,6 +35,16 @@ public class CraftEntityEquipment implements EntityEquipment {
         setEquipment(EntityEquipmentSlot.OFFHAND, item);
     }
 
+    @Override
+    public ItemStack getItemInHand() {
+        return getItemInMainHand();
+    }
+
+    @Override
+    public void setItemInHand(ItemStack stack) {
+        setItemInMainHand(stack);
+    }
+
     public ItemStack getHelmet() {
         return getEquipment(EntityEquipmentSlot.HEAD);
     }
@@ -100,6 +110,16 @@ public class CraftEntityEquipment implements EntityEquipment {
 
     public Entity getHolder() {
         return entity;
+    }
+
+    @Override
+    public float getItemInHandDropChance() {
+        return getItemInMainHandDropChance();
+    }
+
+    @Override
+    public void setItemInHandDropChance(float chance) {
+        setItemInMainHandDropChance(chance);
     }
 
     @Override

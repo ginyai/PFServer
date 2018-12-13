@@ -125,6 +125,11 @@ public interface PlayerInventory extends Inventory {
      */
     public void setBoots(ItemStack boots);
 
+    @Deprecated
+    public ItemStack getItemInHand();
+
+    @Deprecated
+    public void setItemInHand(ItemStack stack);
     /**
      * Gets a copy of the item the player is currently holding
      * in their main hand.

@@ -7,6 +7,11 @@ import org.bukkit.entity.Entity;
  */
 public interface EntityEquipment {
 
+    @Deprecated
+    ItemStack getItemInHand();
+
+    @Deprecated
+    void setItemInHand(ItemStack stack);
     /**
      * Gets a copy of the item the entity is currently holding
      * in their main hand.
@@ -112,6 +117,11 @@ public interface EntityEquipment {
      */
     void clear();
 
+    @Deprecated
+    float getItemInHandDropChance();
+
+    @Deprecated
+    void setItemInHandDropChance(float chance);
     /**
      * Gets the chance of the main hand item being dropped upon this creature's
      * death.

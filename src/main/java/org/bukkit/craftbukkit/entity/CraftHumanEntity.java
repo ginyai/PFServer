@@ -73,6 +73,14 @@ public class CraftHumanEntity extends CraftLivingEntity implements HumanEntity {
         return getHandle().getPrimaryHand()== EnumHandSide.LEFT ? MainHand.LEFT : MainHand.RIGHT;
     }
 
+    public ItemStack getItemInHand() {
+        return getInventory().getItemInHand();
+    }
+
+    public void setItemInHand(ItemStack item) {
+        getInventory().setItemInHand(item);
+    }
+
     public ItemStack getItemOnCursor() {
         return CraftItemStack.asCraftMirror(getHandle().inventory.getItemStack());
     }

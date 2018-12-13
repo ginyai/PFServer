@@ -131,6 +131,11 @@ public interface HumanEntity extends LivingEntity, AnimalTamer, Permissible, Inv
      */
     public void closeInventory();
 
+    @Deprecated
+    public ItemStack getItemInHand();
+
+    @Deprecated
+    public void setItemInHand(ItemStack item);
     /**
      * Returns the ItemStack currently on your cursor, can be empty. Will
      * always be empty if the player currently has no open window.
