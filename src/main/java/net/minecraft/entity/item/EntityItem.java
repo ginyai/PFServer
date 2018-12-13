@@ -27,6 +27,7 @@ import net.minecraftforge.fml.relauncher.SideOnly;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.bukkit.event.entity.EntityPickupItemEvent;
+import org.bukkit.event.player.PlayerPickupItemEvent;
 
 import javax.annotation.Nullable;
 
@@ -452,6 +453,13 @@ public class EntityItem extends Entity
                 entityEvent.setCancelled(!entityIn.canPickUpLoot);
                 this.world.getServer().getPluginManager().callEvent(entityEvent);
                 if (entityEvent.isCancelled()) {
+                    return;
+                }
+
+                PlayerPickupItemEvent playerEvent = new PlayerPickupItemEvent((org.bukkit.entity.Player)entityIn.getBukkitEntity(), (org.bukkit.entity.Item) this.getBukkitEntity(), remaining);
+                playerEvent.setCancelled(!entityIn.canPickUpLoot);
+                this.world.getServer().getPluginManager().callEvent(playerEvent);
+                if (playerEvent.isCancelled()) {
                     return;
                 }
 
