@@ -51,6 +51,7 @@ import org.bukkit.craftbukkit.map.CraftMapView;
 import org.bukkit.craftbukkit.map.RenderData;
 import org.bukkit.craftbukkit.scoreboard.CraftScoreboard;
 import org.bukkit.craftbukkit.util.CraftChatMessage;
+import org.bukkit.craftbukkit.util.CraftMagicNumbers;
 import org.bukkit.entity.EntityType;
 import org.bukkit.entity.Player;
 import org.bukkit.event.player.PlayerRegisterChannelEvent;
@@ -882,6 +883,12 @@ public class CraftPlayer extends CraftHumanEntity implements Player {
     }
 
     @Override
+    @Deprecated
+    public void hidePlayer(Player player) {
+        hidePlayer0(null, player);
+    }
+
+    @Override
     public void hidePlayer(Plugin plugin, Player player) {
         Validate.notNull(plugin, "Plugin cannot be null");
         Validate.isTrue(plugin.isEnabled(), "Plugin attempted to hide player while disabled");
@@ -917,6 +924,12 @@ public class CraftPlayer extends CraftHumanEntity implements Player {
         if (other.sentListPacket) {
             getHandle().connection.sendPacket(new SPacketPlayerListItem(SPacketPlayerListItem.Action.REMOVE_PLAYER, other));
         }
+    }
+
+    @Override
+    @Deprecated
+    public void showPlayer(Player player) {
+        showPlayer0(null, player);
     }
 
     @Override
