@@ -5,6 +5,7 @@
 ### Contact
    [**Discord**](https://discord.gg/HNmmrCV)
    [**bStats**](https://bstats.org/plugin/bukkit/PFServer) 
+   [**Jenkins**](http://mcc.lzjsmc.cn:15592/job/PFServer%201.12.2/) 
 
 ### Info
 * jdk1.8.0_191+
