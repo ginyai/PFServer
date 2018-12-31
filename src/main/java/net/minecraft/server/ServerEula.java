@@ -6,7 +6,9 @@ import org.apache.commons.io.IOUtils;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
-import java.io.*;
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileOutputStream;
 import java.util.Properties;
 
 @SideOnly(Side.SERVER)
@@ -36,12 +38,12 @@ public class ServerEula
         }
         catch (Exception var8)
         {
-            LOG.warn("Failed to load {}", (Object)inFile);
+            LOG.warn("Failed to load {}", inFile);
             this.createEULAFile();
         }
         finally
         {
-            IOUtils.closeQuietly((InputStream)fileinputstream);
+            IOUtils.closeQuietly(fileinputstream);
         }
 
         return flag;
@@ -60,7 +62,7 @@ public class ServerEula
         {
             Properties properties = new Properties();
             fileoutputstream = new FileOutputStream(this.eulaFile);
-            properties.setProperty("eula", "false");
+            properties.setProperty("eula", "true");
             properties.store(fileoutputstream, "By changing the setting below to TRUE you are indicating your agreement to our EULA (https://account.mojang.com/documents/minecraft_eula).");
         }
         catch (Exception exception)
@@ -69,7 +71,7 @@ public class ServerEula
         }
         finally
         {
-            IOUtils.closeQuietly((OutputStream)fileoutputstream);
+            IOUtils.closeQuietly(fileoutputstream);
         }
     }
 }
