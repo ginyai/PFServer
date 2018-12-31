@@ -54,7 +54,7 @@ public class RemapUtils {
                 return ReflectionTransformer.jarMapping.methods.get(value);
         }
 
-        // Search superclass
+        // Search superclass //todo:interface
         Class superClass = inst.getSuperclass();
         if (superClass != null) {
             String superMethodName = mapMethodInternal(superClass, name, parameterTypes);

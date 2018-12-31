@@ -1,23 +1,38 @@
 package cn.pfcraft.server.remapper;
 
+import cn.pfcraft.server.utils.Tuple;
 import com.google.common.collect.ArrayListMultimap;
+import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Multimap;
 import net.md_5.specialsource.JarMapping;
 import net.md_5.specialsource.provider.JointProvider;
-import org.objectweb.asm.ClassReader;
-import org.objectweb.asm.ClassWriter;
-import org.objectweb.asm.Opcodes;
-import org.objectweb.asm.Type;
-import org.objectweb.asm.tree.*;
+import org.objectweb.asm.*;
 
-import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.HashMap;
-import java.util.ListIterator;
+import java.util.Set;
 
-public class ReflectionTransformer {
+public class ReflectionTransformer extends ClassVisitor {
     public static final String DESC_ReflectionMethods = Type.getInternalName(ReflectionMethods.class);
+    private static final Set<Tuple<String, String>> remappedClassMethods = ImmutableSet.of(
+            Tuple.of("getField", "(Ljava/lang/String;)Ljava/lang/reflect/Field;"),
+            Tuple.of("getDeclaredField", "(Ljava/lang/String;)Ljava/lang/reflect/Field;"),
+            Tuple.of("getMethod", "(Ljava/lang/String;[Ljava/lang/Class;)Ljava/lang/reflect/Method;"),
+            Tuple.of("getDeclaredMethod", "(Ljava/lang/String;[Ljava/lang/Class;)Ljava/lang/reflect/Method;"),
+            //Todo:Tuple.of("getName","()Ljava/lang/String;"),
+            //Todo:Tuple.of("getCanonicalName","()Ljava/lang/String;"),
+            Tuple.of("getSimpleName", "()Ljava/lang/String;")
+    );
+    private static final Set<Tuple<String, String>> remappedLookupMethods = ImmutableSet.of(
+            Tuple.of("findStatic", "(Ljava/lang/Class;Ljava/lang/String;Ljava/lang/invoke/MethodType;)Ljava/lang/invoke/MethodHandle;"),
+            Tuple.of("findVirtual", "(Ljava/lang/Class;Ljava/lang/String;Ljava/lang/invoke/MethodType;)Ljava/lang/invoke/MethodHandle;"),
+            Tuple.of("findSpecial", "(Ljava/lang/Class;Ljava/lang/String;Ljava/lang/invoke/MethodType;Ljava/lang/Class;)Ljava/lang/invoke/MethodHandle;"),
+            Tuple.of("findGetter", "(Ljava/lang/Class;Ljava/lang/String;Ljava/lang/Class;)Ljava/lang/invoke/MethodHandle;"),
+            Tuple.of("findSetter", "(Ljava/lang/Class;Ljava/lang/String;Ljava/lang/Class;)Ljava/lang/invoke/MethodHandle;"),
+            Tuple.of("findStaticGetter", "(Ljava/lang/Class;Ljava/lang/String;Ljava/lang/Class;)Ljava/lang/invoke/MethodHandle;"),
+            Tuple.of("findStaticSetter", "(Ljava/lang/Class;Ljava/lang/String;Ljava/lang/Class;)Ljava/lang/invoke/MethodHandle;"),
+            Tuple.of("bind", "(Ljava/lang/Object;Ljava/lang/String;Ljava/lang/invoke/MethodType;)Ljava/lang/invoke/MethodHandle;")
+    );
 
     public static JarMapping jarMapping;
     public static PFServerRemapper remapper;
@@ -48,98 +63,82 @@ public class ReflectionTransformer {
         jarMapping.methods.forEach((k, v) -> methodFastMapping.put(k.split("\\s+")[0], k));
     }
 
+    private ReflectionTransformer(ClassVisitor cv) {
+        super(Opcodes.ASM6, cv);
+    }
+
     /**
      * Convert code from using Class.X methods to our remapped versions
      */
-    public static byte[] transform(byte[] code) {
+    public static byte[] transform(byte[] code) {//todo:Lookup.defineClass?
+        if (disable) {
+            return code;
+        }
         ClassReader reader = new ClassReader(code); // Turn from bytes into visitor
-        ClassNode node = new ClassNode();
-        reader.accept(node, 0); // Visit using ClassNode
-        boolean remapCL = false;
-        if (node.superName.equals("java/net/URLClassLoader")) {
-            node.superName = "cn/pfcraft/server/remapper/PFServerURLClassLoader";
-            remapCL = true;
-        }
-
-        for (MethodNode method : node.methods) { // Taken from SpecialSource
-            ListIterator<AbstractInsnNode> insnIterator = method.instructions.iterator();
-            while (insnIterator.hasNext()) {
-                AbstractInsnNode next = insnIterator.next();
-
-                if (next instanceof TypeInsnNode) {
-                    TypeInsnNode insn = (TypeInsnNode) next;
-                    if (insn.getOpcode() == Opcodes.NEW && insn.desc.equals("java/net/URLClassLoader")) { // remap new URLClassLoader
-                        insn.desc = "cn/pfcraft/server/remapper/PFServerURLClassLoader";
-                        remapCL = true;
-                    }
-                }
-
-                if (!(next instanceof MethodInsnNode)) continue;
-                MethodInsnNode insn = (MethodInsnNode) next;
-                switch (insn.getOpcode()) {
-                    case Opcodes.INVOKEVIRTUAL:
-                        remapVirtual(insn);
-                        break;
-                    case Opcodes.INVOKESTATIC:
-                        remapForName(insn);
-                        break;
-                    case Opcodes.INVOKESPECIAL:
-                        if (remapCL) remapURLClassLoader(insn);
-                        break;
-                }
-
-                if(insn.owner.equals("javax/script/ScriptEngineManager") && insn.desc.equals("()V") && insn.name.equals("<init>")){
-                    insn.desc="(Ljava/lang/ClassLoader;)V";
-                    method.instructions.insertBefore(insn, new MethodInsnNode(Opcodes.INVOKESTATIC, "java/lang/ClassLoader", "getSystemClassLoader", "()Ljava/lang/ClassLoader;"));
-                    method.maxStack++;
-                }
-            }
-        }
-
-        ClassWriter writer = new ClassWriter(0/* ClassWriter.COMPUTE_FRAMES */);
-        node.accept(writer); // Convert back into bytes
+        ClassWriter writer = new ClassWriter(ClassWriter.COMPUTE_FRAMES);
+        ClassVisitor visitor = new ReflectionTransformer(writer);
+        reader.accept(visitor, 0);
         return writer.toByteArray();
     }
 
-    public static void remapForName(AbstractInsnNode insn) {
-        MethodInsnNode method = (MethodInsnNode) insn;
-        if (disable || !method.owner.equals("java/lang/Class") || !method.name.equals("forName")) return;
-        method.owner = DESC_ReflectionMethods;
+    @Override
+    public void visit(int version, int access, String name, String signature, String superName, String[] interfaces) {
+        if ("java/net/URLClassLoader".equals(superName)) {
+            super.visit(version, access, name, signature, "cn/pfcraft/server/remapper/PFServerURLClassLoader", interfaces);
+        } else {
+            super.visit(version, access, name, signature, superName, interfaces);
+        }
     }
 
-    public static void remapVirtual(AbstractInsnNode insn) {
-        MethodInsnNode method = (MethodInsnNode) insn;
-
-        if (!(
-                (method.owner.equals("java/lang/Class") && (
-                        method.name.equals("getField") ||
-                                method.name.equals("getDeclaredField") ||
-                                method.name.equals("getMethod") ||
-                                method.name.equals("getDeclaredMethod") ||
-                                method.name.equals("getSimpleName"))
-                )
-                        ||
-                        (method.name.equals("getName") && (
-                                method.owner.equals("java/lang/reflect/Field") ||
-                                        method.owner.equals("java/lang/reflect/Method"))
-                        )
-                        ||
-                        (method.owner.equals("java/lang/ClassLoader") && method.name.equals("loadClass"))
-        )) return;
-
-        Type returnType = Type.getReturnType(method.desc);
-
-        ArrayList<Type> args = new ArrayList<Type>();
-        args.add(Type.getObjectType(method.owner));
-        args.addAll(Arrays.asList(Type.getArgumentTypes(method.desc)));
-
-        method.setOpcode(Opcodes.INVOKESTATIC);
-        method.owner = DESC_ReflectionMethods;
-        method.desc = Type.getMethodDescriptor(returnType, args.toArray(new Type[args.size()]));
+    @Override
+    public MethodVisitor visitMethod(int access, String name, String desc, String signature, String[] exceptions) {
+        return new RefMethodVisitor(super.visitMethod(access, name, desc, signature, exceptions));
     }
 
-    public static void remapURLClassLoader(MethodInsnNode method) {
-        if (!(method.owner.equals("java/net/URLClassLoader") && method.name.equals("<init>"))) return;
-        method.owner = "cn/pfcraft/server/remapper/PFServerURLClassLoader";
+    private static class RefMethodVisitor extends MethodVisitor {
+
+        RefMethodVisitor(MethodVisitor mv) {
+            super(Opcodes.ASM6, mv);
+        }
+        //todo: Class # getName getCanonicalName
+        //todo: MethodHandles.Lookup # findClass  ?
+
+        @Override
+        public void visitTypeInsn(int opcode, String type) {
+            if (opcode == Opcodes.NEW && "java/net/URLClassLoader".equals(type)) {
+                super.visitTypeInsn(opcode, "cn/pfcraft/server/remapper/PFServerURLClassLoader");
+            } else {
+                super.visitTypeInsn(opcode, type);
+            }
+        }
+
+        @Override
+        public void visitMethodInsn(int opcode, String owner, String name, String desc, boolean itf) {
+            if (opcode == Opcodes.INVOKESTATIC && "java/lang/Class".equals(owner) && "forName".equals(name)) {
+                //Class#forName     Do we need this here?
+                super.visitMethodInsn(opcode, DESC_ReflectionMethods, name, desc, itf);
+            } else if (opcode == Opcodes.INVOKESPECIAL && "java/net/URLClassLoader".equals(owner) && "<init>".equals(name)) {
+                //replace init super URLClassLoader
+                super.visitMethodInsn(opcode, "cn/pfcraft/server/remapper/PFServerURLClassLoader", name, desc, itf);
+            } else if (opcode == Opcodes.INVOKEVIRTUAL && "java/lang/Class".equals(owner) && remappedClassMethods.contains(Tuple.of(name, desc))) {
+                //Class#remappedClassMethods
+                super.visitMethodInsn(Opcodes.INVOKESTATIC, DESC_ReflectionMethods, name, desc.replaceFirst("\\(", "(Ljava/lang/Class;"), itf);
+            } else if (opcode == Opcodes.INVOKEVIRTUAL && "java/lang/reflect/Method".equals(owner) && "getName".equals(name) && "()Ljava/lang/String;".equals(desc)) {
+                //Method#getName
+                super.visitMethodInsn(Opcodes.INVOKESTATIC, DESC_ReflectionMethods, name, "(Ljava/lang/reflect/Method;)Ljava/lang/String;", itf);
+            } else if (opcode == Opcodes.INVOKEVIRTUAL && "java/lang/reflect/Field".equals(owner) && "getName".equals(name) && "()Ljava/lang/String;".equals(desc)) {
+                //Field#getName
+                super.visitMethodInsn(Opcodes.INVOKESTATIC, DESC_ReflectionMethods, name, "(Ljava/lang/reflect/Field;)Ljava/lang/String;", itf);
+            } else if (opcode == Opcodes.INVOKEVIRTUAL && "java/lang/invoke/MethodHandles$Lookup".equals(owner) && remappedLookupMethods.contains(Tuple.of(name, desc))) {
+                //MethodHandles.Lookup
+                super.visitMethodInsn(Opcodes.INVOKESTATIC, DESC_ReflectionMethods, name, desc.replaceFirst("\\(", "(Ljava/lang/invoke/MethodHandles\\$Lookup;"), itf);
+            } else if (opcode == Opcodes.INVOKESPECIAL && "javax/script/ScriptEngineManager".equals(owner) && "<init>".equals(name) && "()V".equals(desc)) {
+                //ScriptEngineManager todo: new ScriptEngineManager()?
+                super.visitMethodInsn(Opcodes.INVOKESTATIC, "java/lang/ClassLoader", "getSystemClassLoader", "()Ljava/lang/ClassLoader;", false);
+                super.visitMethodInsn(opcode, owner, name, "(Ljava/lang/ClassLoader;)V", itf);
+            } else {
+                super.visitMethodInsn(opcode, owner, name, desc, itf);
+            }
+        }
     }
 }
